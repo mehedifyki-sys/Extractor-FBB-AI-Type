@@ -480,7 +480,7 @@
         <section id="extractTab" class="tab active">
           <div class="section">
             <h3>Player Details Extractor</h3>
-            <p>Upload the raw order CSV. The system uses an adaptive extraction engine with segment classification, confidence scoring, and business-rule suppression to extract Player Number, Player Initial, and Player Name from Product Variation Details. Initial values like NO are kept when they are explicitly written as the player initial, and name extraction only triggers on explicit name labels. Stage 1 exports a clean CSV, trims extra spaces, and forces Player Number columns to open in Excel as text so values like 00 stay exactly as 00.</p>
+            <p>Upload the raw order CSV. The system uses an adaptive extraction engine with segment classification, confidence scoring, and business-rule suppression to extract Player Number, Player Initial, and Player Name from Product Variation Details. Initial values like NO are kept when they are explicitly written as the player initial, and name extraction can also infer a clean unlabeled player name when it appears right beside player-related segments. Stage 1 exports a clean CSV, trims extra spaces, and forces Player Number columns to open in Excel as text so values like 00 stay exactly as 00.</p>
 
             <div class="row">
               <div class="filebox">
@@ -589,7 +589,7 @@
         </section>
 
         <div class="footer-note">
-          Note: this file runs in a browser and does not need Python. Because the app reads and writes Excel workbooks in the browser, it uses JavaScript spreadsheet libraries. The matching key in Step 2 is now BC Order # + Material in the packing list versus Order ID + Material in the cleaned order file. The matcher trims header spaces, and the Stage 1 CSV export removes leading and trailing spaces while forcing Player Number columns to stay as text in Excel. The Pro version also adds extraction confidence notes and highlights uncertain rows for review.
+          Note: this file runs in a browser and does not need Python. Because the app reads and writes Excel workbooks in the browser, it uses JavaScript spreadsheet libraries. The matching key in Step 2 is now BC Order # + Material in the packing list versus Order ID + Material in the cleaned order file. The matcher trims header spaces, and the Stage 1 CSV export removes leading and trailing spaces while forcing Player Number columns to stay as text in Excel. The Pro version also adds extraction confidence notes, inferred-name detection near player context, and highlights uncertain rows for review.
         </div>
       </main>
     </div>
@@ -833,7 +833,7 @@ function splitAdaptiveSegments(raw){
 function cleanNameCandidate(candidate){
   let cleaned = cleanupNameValue(candidate);
   cleaned = cleaned
-    .replace(/\b(?:Club|Delivery Info|Player ID|Player Number|Number|Qty|Quantity|Size|Color|Region|Warehouse|Ship To|Ship Via|Orders? Will Be Received)\b.*$/i, '')
+    .replace(/(?:Club|Delivery Info|Player ID|Player Number|Number|Qty|Quantity|Size|Color|Region|Warehouse|Ship To|Ship Via|Orders? Will Be Received).*$/i, '')
     .replace(/^[\s:;,\-_=]+/, '')
     .replace(/[\s:;,\-_=]+$/, '')
     .replace(/\s+/g, ' ')
@@ -843,13 +843,53 @@ function cleanNameCandidate(candidate){
   if (/^(yes|no|x|xx|n\/a|na|null)$/i.test(cleaned)) return '';
   if (!/[A-Za-z]/.test(cleaned)) return '';
   if (/^\d+$/.test(cleaned)) return '';
-  if (/\b(?:CLUB|DELIVERY INFO|PLAYER ID|ORDERS? WILL BE RECEIVED|PREMIER|UNITED|SC|FC|ACADEMY|REGION|WAREHOUSE|SHIP TO|SHIP VIA)\b/i.test(cleaned)) return '';
+  if (/(?:CLUB|DELIVERY INFO|PLAYER ID|ORDERS? WILL BE RECEIVED|PREMIER|UNITED|SC|FC|ACADEMY|REGION|WAREHOUSE|SHIP TO|SHIP VIA)/i.test(cleaned)) return '';
   if (/^(RTHEAST|ORTHEAST|NORTHEAST|SOUTHEAST|SOUTHWEST|NORTHWEST|NORTH|SOUTH|EAST|WEST|MIDWEST|CENTRAL|USA|BD)$/i.test(cleaned)) return '';
   if (!/\s/.test(cleaned) && cleaned.length > 5) return '';
   const wordCount = cleaned.split(/\s+/).filter(Boolean).length;
   if (wordCount > 3) return '';
   if (!/^[A-Za-z][A-Za-z'’.\-]*(?:\s+[A-Za-z][A-Za-z'’.\-]*){0,2}$/.test(cleaned)) return '';
   return toTitleCaseName(cleaned);
+}
+function cleanInferredNameCandidate(candidate){
+  let cleaned = cleanupNameValue(candidate)
+    .replace(/(?:Club|Delivery Info|Player ID|Player Number|Number|Qty|Quantity|Size|Color|Region|Warehouse|Ship To|Ship Via|Orders? Will Be Received).*$/i, '')
+    .replace(/^[\s:;,\-_=#]+/, '')
+    .replace(/[\s:;,\-_=#]+$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!cleaned) return '';
+  if (/^(yes|no|x|xx|n\/a|na|null)$/i.test(cleaned)) return '';
+  if (!/[A-Za-z]/.test(cleaned)) return '';
+  if (/^\d+$/.test(cleaned)) return '';
+  if (/(?:CLUB|DELIVERY INFO|PLAYER ID|ORDERS? WILL BE RECEIVED|PREMIER|UNITED|SC|FC|ACADEMY|REGION|WAREHOUSE|SHIP TO|SHIP VIA|ORDERS?|MATERIAL|COLOR|SIZE)/i.test(cleaned)) return '';
+  if (/^(RTHEAST|ORTHEAST|NORTHEAST|SOUTHEAST|SOUTHWEST|NORTHWEST|NORTH|SOUTH|EAST|WEST|MIDWEST|CENTRAL|USA|BD)$/i.test(cleaned)) return '';
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length < 1 || words.length > 2) return '';
+  if (!words.every(w => /^[A-Za-z][A-Za-z'’.\-]*$/.test(w))) return '';
+  if (words.length === 1){
+    const w = words[0];
+    if (w.length < 3 || w.length > 12) return '';
+  }
+  return cleaned;
+}
+function isLikelyNameContext(type){
+  return ['player_number','player_initial','player_name','player_id','customization_flag_number','customization_flag_name'].includes(String(type || ''));
+}
+function inferNameCandidatesFromContext(segments){
+  const out = [];
+  for (let i = 0; i < (segments || []).length; i++){
+    const seg = segments[i] || {};
+    if (seg.type !== 'noise' && seg.type !== 'size') continue;
+    const prev = segments[i - 1] || {};
+    const next = segments[i + 1] || {};
+    if (!isLikelyNameContext(prev.type) && !isLikelyNameContext(next.type)) continue;
+    const inferred = cleanInferredNameCandidate(seg.text || '');
+    if (!inferred) continue;
+    out.push(makeCandidate('name', inferred, 0.88, seg.text, 'inferred_player_name', 'inferred unlabeled name near player context'));
+  }
+  return out;
 }
 function classifySegment(segment){
   const s = String(segment || '').trim();
@@ -943,6 +983,7 @@ function resolveAdaptiveExtraction(rawText){
   segments.forEach(seg => {
     candidates.push(...extractAdaptiveCandidates(seg.text, seg.type));
   });
+  candidates.push(...inferNameCandidatesFromContext(segments));
   candidates = dedupeCandidates(candidates);
 
   let numbers = candidates.filter(c => c.field === 'number').sort((a,b)=>b.confidence-a.confidence);
