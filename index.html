@@ -317,6 +317,8 @@
       border-radius:18px;
       overflow:hidden;
       background:#fff;
+      width:100%;
+      max-width:100%;
     }
 
     .preview-head{
@@ -342,13 +344,18 @@
 
     .table-wrap{
       max-height:460px;
+      max-width:100%;
+      width:100%;
       overflow:auto;
+      -webkit-overflow-scrolling:touch;
+      overscroll-behavior:contain;
     }
 
     table{
       border-collapse:collapse;
       width:max-content;
       min-width:100%;
+      max-width:none;
       background:#fff;
     }
 
@@ -411,10 +418,19 @@
     }
 
     @media (max-width:760px){
+      body{overflow-x:hidden}
       .app{padding:14px}
       .hero{padding:22px}
       .hero h1{font-size:26px}
+      .main-panel{padding:12px}
+      .section{padding:12px}
       .card-grid{grid-template-columns:1fr}
+      .preview-head{padding:12px}
+      .table-wrap{max-height:360px}
+      th, td{padding:7px 8px;font-size:11px}
+      .filebox{min-width:100%;flex:1 1 100%}
+      button{width:100%}
+      .row{align-items:stretch}
     }
   </style>
 </head>
@@ -692,10 +708,24 @@ function buildCombinedMaterialLookup(rows){
   return lookup;
 }
 
+const HIDDEN_PREVIEW_COLUMNS = new Set([
+  'Player Number Confidence',
+  'Player Initial Confidence',
+  'Player Name Confidence',
+  'Player Number Source',
+  'Player Initial Source',
+  'Player Name Source'
+]);
+
+function visibleColumnsForPreview(rows){
+  if (!rows || !rows.length) return [];
+  return Object.keys(rows[0]).filter(c => !HIDDEN_PREVIEW_COLUMNS.has(String(c || '').trim()));
+}
+
 function renderTable(containerId, rows, mismatchColumn){
   const root = document.getElementById(containerId);
   if (!rows || !rows.length){ root.innerHTML = ''; return; }
-  const cols = Object.keys(rows[0]);
+  const cols = visibleColumnsForPreview(rows);
   let html = '<table><thead><tr>' + cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('') + '</tr></thead><tbody>';
   rows.slice(0,1000).forEach(r=>{
     const mm = mismatchColumn && String(r[mismatchColumn] || '').toUpperCase() === 'MISMATCH';
@@ -1136,12 +1166,6 @@ function buildExtractorOutput(inputObjects){
     for (let i=0;i<maxInitials;i++) out[`Player Initial ${i+1}`] = r._initials[i] || '';
     out["Player Name Raw 1"] = r._names[0] || '';
     for (let i=0;i<maxNames;i++) out[`Player Name ${i+1}`] = r._names[i] || '';
-    out["Player Number Confidence"] = r._num_conf ? r._num_conf.toFixed(2) : '';
-    out["Player Initial Confidence"] = r._init_conf ? r._init_conf.toFixed(2) : '';
-    out["Player Name Confidence"] = r._name_conf ? r._name_conf.toFixed(2) : '';
-    out["Player Number Source"] = r._num_source || '';
-    out["Player Initial Source"] = r._init_source || '';
-    out["Player Name Source"] = r._name_source || '';
     out["Extraction Status"] = r._extract_status || 'OK';
     out["Extraction Review Note"] = r._extract_note || '';
     out["Notes"] = r["Notes"];
@@ -1204,6 +1228,7 @@ document.getElementById('downloadExtractBtn').addEventListener('click', ()=>{
     const out = {};
     Object.keys(row).forEach(key => {
       const trimmedKey = String(key).trim();
+      if (HIDDEN_PREVIEW_COLUMNS.has(trimmedKey)) return;
       out[trimmedKey] = isPlayerNumberColumn(trimmedKey)
         ? csvTextValueForExcel(row[key])
         : cleanCsvValue(row[key]);
@@ -1389,7 +1414,7 @@ function scoreStage2Candidate(cand, packPlayer, packName, packQty){
   if (packQty === ordQty) score += 10;
   else score -= 8;
 
-  const confidence = qtyNumber(rowValueByHeader(cand, ['Player Number Confidence'])) + qtyNumber(rowValueByHeader(cand, ['Player Initial Confidence'])) + qtyNumber(rowValueByHeader(cand, ['Player Name Confidence']));
+  const confidence = getCandidateConfidenceScore(cand);
   score += Math.min(12, confidence * 4);
 
   return {
