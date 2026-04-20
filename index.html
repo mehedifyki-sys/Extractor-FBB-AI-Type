@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Enterprise AI Extractor V1</title>
+  <title>Enterprise AI Extractor V4</title>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
@@ -147,25 +147,6 @@
       letter-spacing:-0.01em;
     }
 
-    .badge{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      border-radius:999px;
-      padding:8px 12px;
-      font-size:12px;
-      font-weight:700;
-      border:1px solid var(--line);
-      background:#fff;
-      color:var(--muted);
-    }
-
-    .switcher{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-
     .tab-btn{
       width:100%;
       text-align:left;
@@ -184,12 +165,8 @@
       box-shadow:0 8px 18px rgba(37,99,235,.2);
     }
 
-    .tab{
-      display:none;
-    }
-    .tab.active{
-      display:block;
-    }
+    .tab{ display:none; }
+    .tab.active{ display:block; }
 
     .card-grid{
       display:grid;
@@ -376,14 +353,11 @@
       color:#334155;
     }
 
-    tr.mismatch td{
-      background:#fef2f2;
-    }
-
+    tr.mismatch td{ background:#fef2f2; }
+    tr.uncertain td{ background:#fff7ed; }
+    tr.unpaid td{ background:#fee2e2; }
     .text-ok{color:var(--ok);font-weight:800}
     .text-bad{color:var(--bad);font-weight:800}
-    tr.uncertain td{background:#fff7ed;}
-    tr.unpaid td{background:#fee2e2;}
     .text-warn{color:var(--warn);font-weight:800}
 
     .info-strip{
@@ -437,9 +411,10 @@
 <body>
   <div class="app">
     <section class="hero">
-      <h1>Order Validation Dashboard - Enterprise FINAL V3</h1>
+      <h1>Order Validation Dashboard - Enterprise FINAL V4</h1>
       <p>
-        This browser-based system runs without Python. Users can open the file on a PC, extract player details from the raw order CSV, then upload the cleaned CSV file together with the packing list to generate a final packing list export with mismatch checks and red-highlighted review rows.
+        Browser-based extractor and packing list matcher with stronger last-name extraction, tolerance for single-word names,
+        fixed stage-2 scoring, and cleaner mismatch review.
       </p>
     </section>
 
@@ -447,8 +422,8 @@
       <aside class="sidebar">
         <h2 class="side-title">Workflow</h2>
         <div style="margin-bottom:14px;display:flex;flex-direction:column;gap:10px;">
-          <button class="tab-btn active" style="width:100%;text-align:left;" data-tab="extractTab">Step 1: Extract</button>
-          <button class="tab-btn" style="width:100%;text-align:left;" data-tab="matchTab">Step 2: Match</button>
+          <button class="tab-btn active" data-tab="extractTab">Step 1: Extract</button>
+          <button class="tab-btn" data-tab="matchTab">Step 2: Match</button>
         </div>
 
         <div class="step">
@@ -463,7 +438,7 @@
           <div class="step-num">2</div>
           <div>
             <h3>Extract Player Data</h3>
-            <p>Create the cleaned order file with player number, initials, and last name columns.</p>
+            <p>Create the cleaned order file with player number, initials, and last-name columns.</p>
           </div>
         </div>
 
@@ -496,7 +471,10 @@
         <section id="extractTab" class="tab active">
           <div class="section">
             <h3>Player Details Extractor</h3>
-            <p>Upload the raw order CSV. The system uses an adaptive extraction engine with segment classification, confidence scoring, and business-rule suppression to extract Player Number, Player Initial, and Player Name from Product Variation Details. Initial values like NO are kept when they are explicitly written as the player initial, and name extraction can also infer a clean unlabeled player name when it appears right beside player-related segments. Stage 1 exports a clean CSV, trims extra spaces, and forces Player Number columns to open in Excel as text so values like 00 stay exactly as 00.</p>
+            <p>
+              Upload the raw order CSV. V4 strengthens extraction for Player Name, Player Last Name, Last-Name, LastName,
+              and single-word last names like Herman, Gomez, Anderson, and similar values.
+            </p>
 
             <div class="row">
               <div class="filebox">
@@ -521,21 +499,6 @@
             <div class="stat"><div class="label">Uncertain Rows</div><div class="value" id="ex_uncertain">0</div></div>
           </div>
 
-          <div class="info-strip">
-            <div class="mini">
-              <h5>Input</h5>
-              <p>Raw MTO CSV only.</p>
-            </div>
-            <div class="mini">
-              <h5>Output</h5>
-              <p>Cleaned CSV file with Player Number fields preserved as text in Excel, plus extraction status and review notes.</p>
-            </div>
-            <div class="mini">
-              <h5>Use</h5>
-              <p>Download the extracted file, then upload it in Step 2.</p>
-            </div>
-          </div>
-
           <div class="preview-card">
             <div class="preview-head">
               <h4>Extraction Preview</h4>
@@ -548,7 +511,10 @@
         <section id="matchTab" class="tab">
           <div class="section">
             <h3>Packing List Matcher</h3>
-            <p>Upload the cleaned order XLSX/CSV and the packing list workbook. The output keeps the original packing list layout and adds review columns at the end. Mismatch rows are highlighted in red. Uncertain extraction rows are highlighted in yellow. Files are loaded into memory first for better stability. The matcher also validates quantity row by row, compares total quantity across both files, flags duplicate material rows under the same order, and adds extraction-confidence notes for easier review.</p>
+            <p>
+              Upload the cleaned order XLSX/CSV and the packing list workbook. V4 fixes the stage-2 scoring function,
+              improves candidate selection, and reduces false red mismatches.
+            </p>
 
             <div class="row">
               <div class="filebox">
@@ -580,21 +546,6 @@
             <div class="stat"><div class="label">Duplicate Material Rows</div><div class="value" id="mt_dup">0</div></div>
           </div>
 
-          <div class="info-strip">
-            <div class="mini">
-              <h5>Validation Rule</h5>
-              <p>Matching now uses Order ID + Material from the cleaned order file against BC Order # + Material in the packing list. Header names are trimmed automatically, so columns like "Material " also match correctly.</p>
-            </div>
-            <div class="mini">
-              <h5>Name Rule</h5>
-              <p>Product SKU is no longer the main key. The system uses the Material column from the cleaned order file, which fixes cases where Product SKU differs from the packing material.</p>
-            </div>
-            <div class="mini">
-              <h5>Export</h5>
-              <p>Final file name downloads as <strong>packing list.xlsx</strong>.</p>
-            </div>
-          </div>
-
           <div class="preview-card">
             <div class="preview-head">
               <h4>Matching Preview</h4>
@@ -605,7 +556,7 @@
         </section>
 
         <div class="footer-note">
-          Note: this file runs in a browser and does not need Python. Because the app reads and writes Excel workbooks in the browser, it uses JavaScript spreadsheet libraries. The matching key in Step 2 is now BC Order # + Material in the packing list versus Order ID + Material in the cleaned order file. The matcher trims header spaces, and the Stage 1 CSV export removes leading and trailing spaces while forcing Player Number columns to stay as text in Excel. The Pro version also adds extraction confidence notes, inferred-name detection near player context, and highlights uncertain rows for review.
+          V4 fixes: missing candidate confidence function, stronger player last-name extraction, improved single-word name handling, and better stage-2 row selection.
         </div>
       </main>
     </div>
@@ -613,14 +564,9 @@
 
 <script>
 let extractedRows = [];
-let extractedCsvBlob = null;
 let matchedWorkbookBlob = null;
 let cachedCleanOrdersRows = null;
 let cachedPackingArrayBuffer = null;
-let cachedCleanOrdersName = '';
-let cachedPackingName = '';
-let cachedCombinedOrderRows = null;
-
 
 function setText(id, value){ document.getElementById(id).textContent = value; }
 function setStatus(id, text, kind=''){
@@ -639,15 +585,16 @@ function downloadBlob(blob, filename){
 function normalizeHeader(v){ return String(v || '').trim().toLowerCase(); }
 function normText(v){ return String(v ?? '').replace(/\s+/g,' ').trim().toUpperCase(); }
 function numericOnly(v){ return /^\d+$/.test(String(v || '').trim()); }
-function qtyNumber(v){ const s = String(v ?? '').replace(/,/g,'').trim(); const n = Number(s); return Number.isFinite(n) ? n : 0; }
-function escapeHtml(s){ return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-function orderIdFromAny(s){ const m = String(s ?? '').match(/(\d+)/); return m ? m[1] : ''; }
-function normMaterialKey(v){
-  return String(v ?? '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toUpperCase();
+function qtyNumber(v){
+  const s = String(v ?? '').replace(/,/g,'').trim();
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
 }
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function orderIdFromAny(s){ const m = String(s ?? '').match(/(\d+)/); return m ? m[1] : ''; }
+function normMaterialKey(v){ return String(v ?? '').replace(/\s+/g, ' ').trim().toUpperCase(); }
 function rowValueByHeader(rowObj, names){
   const keys = Object.keys(rowObj || {});
   for (const wanted of names){
@@ -695,17 +642,14 @@ function firstUsefulValue(values){
   return '';
 }
 
-function buildCombinedMaterialLookup(rows){
-  const lookup = {};
-  for (const row of (rows || [])) {
-    const oid = orderIdFromAny(rowValueByHeader(row, ['Order ID','OrderID','BC Order','BC Order #','BC order','BC order #']));
-    const sku = normMaterialKey(rowValueByHeader(row, ['Product SKU','SKU','ProductSku','Product SKU ']));
-    const material = String(rowValueByHeader(row, ['Material','Material ','Material Number','MaterialNumber']) || '').trim();
-    if (!oid || !sku || !material) continue;
-    const key = oid + '||' + sku;
-    if (!lookup[key]) lookup[key] = material;
-  }
-  return lookup;
+function getCandidateConfidenceScore(cand){
+  let score = 0;
+  if (getAllValuesByPrefixes(cand, ['Player Number']).length) score += 1;
+  if (getAllValuesByPrefixes(cand, ['Player Initial']).length) score += 1;
+  if (getAllValuesByPrefixes(cand, ['Player Name']).length) score += 1;
+  if (getAllValuesByPrefixes(cand, ['Player Name Raw']).length) score += 1;
+  if (String(cand['Extraction Status'] || '').toUpperCase() === 'OK') score += 1;
+  return score;
 }
 
 const HIDDEN_PREVIEW_COLUMNS = new Set([
@@ -755,16 +699,13 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   });
 });
 
-
 document.getElementById('cleanOrdersFile').addEventListener('change', async (e)=>{
   const f = e.target.files[0];
   cachedCleanOrdersRows = null;
-  cachedCleanOrdersName = '';
   if (!f) return;
   try{
     setStatus('matchStatus', 'Reading cleaned order file into memory...', 'warn');
     cachedCleanOrdersRows = await readOrderRows(f);
-    cachedCleanOrdersName = f.name || '';
     setStatus('matchStatus', 'Cleaned order file loaded. Now upload the packing list and click Match.', 'ok');
   }catch(err){
     console.error(err);
@@ -775,12 +716,10 @@ document.getElementById('cleanOrdersFile').addEventListener('change', async (e)=
 document.getElementById('packingFile').addEventListener('change', async (e)=>{
   const f = e.target.files[0];
   cachedPackingArrayBuffer = null;
-  cachedPackingName = '';
   if (!f) return;
   try{
     setStatus('matchStatus', 'Reading packing list workbook into memory...', 'warn');
     cachedPackingArrayBuffer = await f.arrayBuffer();
-    cachedPackingName = f.name || '';
     setStatus('matchStatus', 'Packing list loaded. Click Match when both files are ready.', 'ok');
   }catch(err){
     console.error(err);
@@ -788,18 +727,6 @@ document.getElementById('packingFile').addEventListener('change', async (e)=>{
   }
 });
 
-
-
-/* Step 1 */
-function extractAll(text, regex){
-  const out = [];
-  const t = String(text || '');
-  for (const m of t.matchAll(regex)) {
-    const v = (m[1] || '').trim();
-    if (v) out.push(v);
-  }
-  return out;
-}
 function standardizeYesNo(values){
   return values.map(v=>{
     const lv = String(v).trim().toLowerCase();
@@ -836,7 +763,7 @@ function toTitleCaseName(v){
     .map(part => {
       if (!part || /^\s+$/.test(part) || part === '-') return part;
       return part.split(/(['’])/).map(seg => {
-        if (seg === "'" || seg === "’") return seg;
+        if (seg === "'" || seg === '’') return seg;
         return seg ? seg.charAt(0).toUpperCase() + seg.slice(1) : seg;
       }).join('');
     })
@@ -863,7 +790,7 @@ function splitAdaptiveSegments(raw){
 function cleanNameCandidate(candidate){
   let cleaned = cleanupNameValue(candidate);
   cleaned = cleaned
-    .replace(/(?:Club|Delivery Info|Player ID|Player Number|Number|Qty|Quantity|Size|Color|Region|Warehouse|Ship To|Ship Via|Orders? Will Be Received).*$/i, '')
+    .replace(/\b(?:Club|Delivery Info|Player ID|Player Number|Number|Qty|Quantity|Size|Color|Region|Warehouse|Ship To|Ship Via|Orders? Will Be Received)\b.*$/i, '')
     .replace(/^[\s:;,\-_=]+/, '')
     .replace(/[\s:;,\-_=]+$/, '')
     .replace(/\s+/g, ' ')
@@ -873,9 +800,13 @@ function cleanNameCandidate(candidate){
   if (/^(yes|no|x|xx|n\/a|na|null)$/i.test(cleaned)) return '';
   if (!/[A-Za-z]/.test(cleaned)) return '';
   if (/^\d+$/.test(cleaned)) return '';
-  if (/(?:CLUB|DELIVERY INFO|PLAYER ID|ORDERS? WILL BE RECEIVED|PREMIER|UNITED|SC|FC|ACADEMY|REGION|WAREHOUSE|SHIP TO|SHIP VIA)/i.test(cleaned)) return '';
+  if (/\b(?:CLUB|DELIVERY INFO|PLAYER ID|ORDERS? WILL BE RECEIVED|PREMIER|UNITED|SC|FC|ACADEMY|REGION|WAREHOUSE|SHIP TO|SHIP VIA)\b/i.test(cleaned)) return '';
   if (/^(RTHEAST|ORTHEAST|NORTHEAST|SOUTHEAST|SOUTHWEST|NORTHWEST|NORTH|SOUTH|EAST|WEST|MIDWEST|CENTRAL|USA|BD)$/i.test(cleaned)) return '';
-  if (!/\s/.test(cleaned) && cleaned.length > 5) return '';
+
+  if (!/\s/.test(cleaned)) {
+    if (cleaned.length < 2 || cleaned.length > 15) return '';
+  }
+
   const wordCount = cleaned.split(/\s+/).filter(Boolean).length;
   if (wordCount > 3) return '';
   if (!/^[A-Za-z][A-Za-z'’.\-]*(?:\s+[A-Za-z][A-Za-z'’.\-]*){0,2}$/.test(cleaned)) return '';
@@ -883,7 +814,7 @@ function cleanNameCandidate(candidate){
 }
 function cleanInferredNameCandidate(candidate){
   let cleaned = cleanupNameValue(candidate)
-    .replace(/(?:Club|Delivery Info|Player ID|Player Number|Number|Qty|Quantity|Size|Color|Region|Warehouse|Ship To|Ship Via|Orders? Will Be Received).*$/i, '')
+    .replace(/\b(?:Club|Delivery Info|Player ID|Player Number|Number|Qty|Quantity|Size|Color|Region|Warehouse|Ship To|Ship Via|Orders? Will Be Received)\b.*$/i, '')
     .replace(/^[\s:;,\-_=#]+/, '')
     .replace(/[\s:;,\-_=#]+$/, '')
     .replace(/\s+/g, ' ')
@@ -893,16 +824,16 @@ function cleanInferredNameCandidate(candidate){
   if (/^(yes|no|x|xx|n\/a|na|null)$/i.test(cleaned)) return '';
   if (!/[A-Za-z]/.test(cleaned)) return '';
   if (/^\d+$/.test(cleaned)) return '';
-  if (/(?:CLUB|DELIVERY INFO|PLAYER ID|ORDERS? WILL BE RECEIVED|PREMIER|UNITED|SC|FC|ACADEMY|REGION|WAREHOUSE|SHIP TO|SHIP VIA|ORDERS?|MATERIAL|COLOR|SIZE)/i.test(cleaned)) return '';
+  if (/\b(?:CLUB|DELIVERY INFO|PLAYER ID|ORDERS? WILL BE RECEIVED|PREMIER|UNITED|SC|FC|ACADEMY|REGION|WAREHOUSE|SHIP TO|SHIP VIA|ORDERS?|MATERIAL|COLOR|SIZE)\b/i.test(cleaned)) return '';
   if (/^(RTHEAST|ORTHEAST|NORTHEAST|SOUTHEAST|SOUTHWEST|NORTHWEST|NORTH|SOUTH|EAST|WEST|MIDWEST|CENTRAL|USA|BD)$/i.test(cleaned)) return '';
   const words = cleaned.split(/\s+/).filter(Boolean);
   if (words.length < 1 || words.length > 2) return '';
   if (!words.every(w => /^[A-Za-z][A-Za-z'’.\-]*$/.test(w))) return '';
   if (words.length === 1){
     const w = words[0];
-    if (w.length < 3 || w.length > 12) return '';
+    if (w.length < 2 || w.length > 15) return '';
   }
-  return cleaned;
+  return toTitleCaseName(cleaned);
 }
 function isLikelyNameContext(type){
   return ['player_number','player_initial','player_name','player_id','customization_flag_number','customization_flag_name'].includes(String(type || ''));
@@ -1096,7 +1027,6 @@ function buildExtractionAssessment(txt, smart){
 
   return { status, note: uniqueClean(notes).join('; ') };
 }
-
 function buildExtractorOutput(inputObjects){
   const first = inputObjects[0] || {};
   const keys = Object.keys(first);
@@ -1107,68 +1037,67 @@ function buildExtractorOutput(inputObjects){
   const qtyKey = keys.find(k=>normalizeHeader(k)==='product qty');
   const skuKey = keys.find(k=>normalizeHeader(k)==='product sku');
   const nameKey = keys.find(k=>normalizeHeader(k)==='product name');
+  const materialKey = keys.find(k=>['material','material number','materialnumber'].includes(normalizeHeader(k)));
 
   let maxNums=1, maxInitials=1, maxNames=1, matchedRows=0;
 
   const staged = inputObjects.map((row, i)=>{
     const txt = String(row[variationKey] || '').trim();
-    const orderId = orderKey ? String(row[orderKey] || '').trim() : '';
-    const productSku = skuKey ? String(row[skuKey] || '').trim() : '';
-
     const smart = resolveAdaptiveExtraction(txt);
-    const nums = smart.nums;
-    const ids = smart.ids;
-    const initials = smart.initials;
-    const names = smart.names;
-    const requirements = smart.requirements;
-
-    maxNums = Math.max(maxNums, nums.length || 1);
-    maxInitials = Math.max(maxInitials, initials.length || 1);
-    maxNames = Math.max(maxNames, names.length || 1);
-
-    const hasMatch = [nums, ids, initials, names, requirements].some(a=>a.length);
+    const hasMatch = [smart.nums, smart.ids, smart.initials, smart.names, smart.requirements].some(a=>a.length);
     if (hasMatch) matchedRows++;
+    maxNums = Math.max(maxNums, smart.nums.length || 1);
+    maxInitials = Math.max(maxInitials, smart.initials.length || 1);
+    maxNames = Math.max(maxNames, smart.names.length || 1);
 
     const assess = buildExtractionAssessment(txt, smart);
+
     return {
-      "Source Row": String(i+2),
-      "Order ID": orderId,
-      "Product Qty": qtyKey ? String(row[qtyKey] || '') : '',
-      "Product SKU": productSku,
-      "Product Name": nameKey ? String(row[nameKey] || '') : '',
-      "Original Product Variation Details": txt,
-      "_nums": nums,
-      "_initials": initials,
-      "_names": names,
-      "_name_requirements": smart.nameRequirements,
-      "_extract_status": assess.status,
-      "_extract_note": assess.note,
-      "_num_conf": smart.confidence.number,
-      "_init_conf": smart.confidence.initial,
-      "_name_conf": smart.confidence.name,
-      "_num_source": smart.sources.number,
-      "_init_source": smart.sources.initial,
-      "_name_source": smart.sources.name,
-      "Notes": !txt ? "Blank Product Variation Details" : (hasMatch ? "Adaptive match found" : "No target value found")
+      'Source Row': String(i+2),
+      'Order ID': orderKey ? String(row[orderKey] || '').trim() : '',
+      'Product Qty': qtyKey ? String(row[qtyKey] || '').trim() : '',
+      'Product SKU': skuKey ? String(row[skuKey] || '').trim() : '',
+      'Material': materialKey ? String(row[materialKey] || '').trim() : '',
+      'Product Name': nameKey ? String(row[nameKey] || '').trim() : '',
+      'Original Product Variation Details': txt,
+      '_nums': smart.nums,
+      '_initials': smart.initials,
+      '_names': smart.names,
+      '_extract_status': assess.status,
+      '_extract_note': assess.note,
+      '_num_conf': smart.confidence.number,
+      '_init_conf': smart.confidence.initial,
+      '_name_conf': smart.confidence.name,
+      '_num_source': smart.sources.number,
+      '_init_source': smart.sources.initial,
+      '_name_source': smart.sources.name,
+      'Notes': !txt ? 'Blank Product Variation Details' : (hasMatch ? 'Adaptive match found' : 'No target value found')
     };
   });
 
   const output = staged.map(r=>{
     const out = {
-      "Source Row": r["Source Row"],
-      "Order ID": r["Order ID"],
-      "Product Qty": r["Product Qty"],
-      "Product SKU": r["Product SKU"],
-      "Product Name": r["Product Name"],
-      "Original Product Variation Details": r["Original Product Variation Details"],
+      'Source Row': r['Source Row'],
+      'Order ID': r['Order ID'],
+      'Product Qty': r['Product Qty'],
+      'Product SKU': r['Product SKU'],
+      'Material': r['Material'],
+      'Product Name': r['Product Name'],
+      'Original Product Variation Details': r['Original Product Variation Details']
     };
     for (let i=0;i<maxNums;i++) out[`Player Number ${i+1}`] = r._nums[i] || '';
     for (let i=0;i<maxInitials;i++) out[`Player Initial ${i+1}`] = r._initials[i] || '';
-    out["Player Name Raw 1"] = r._names[0] || '';
+    out['Player Name Raw 1'] = r._names[0] || '';
     for (let i=0;i<maxNames;i++) out[`Player Name ${i+1}`] = r._names[i] || '';
-    out["Extraction Status"] = r._extract_status || 'OK';
-    out["Extraction Review Note"] = r._extract_note || '';
-    out["Notes"] = r["Notes"];
+    out['Player Number Confidence'] = r._num_conf || '';
+    out['Player Initial Confidence'] = r._init_conf || '';
+    out['Player Name Confidence'] = r._name_conf || '';
+    out['Player Number Source'] = r._num_source || '';
+    out['Player Initial Source'] = r._init_source || '';
+    out['Player Name Source'] = r._name_source || '';
+    out['Extraction Status'] = r._extract_status || 'OK';
+    out['Extraction Review Note'] = r._extract_note || '';
+    out['Notes'] = r['Notes'];
     return out;
   });
 
@@ -1183,118 +1112,56 @@ function buildExtractorOutput(inputObjects){
   };
 }
 
-document.getElementById('extractBtn').addEventListener('click', async ()=>{
-  const rawFile = document.getElementById('rawOrdersFile').files[0];
-  if (!rawFile) { alert('Please choose the raw order CSV file first.'); return; }
-
-  try{
-    setStatus('extractStatus', 'Processing raw order CSV...', 'warn');
-
-    const rawRows = await readCsvRows(rawFile);
-    const {output, stats} = buildExtractorOutput(rawRows);
-    extractedRows = output;
-    extractedCsvBlob = null;
-    document.getElementById('downloadExtractBtn').disabled = false;
-
-    setText('ex_input', stats.input_rows);
-    setText('ex_output', stats.output_rows);
-    setText('ex_match', stats.matched_rows);
-    setText('ex_max', stats.max_player_numbers);
-    setText('ex_uncertain', output.filter(r => String(r['Extraction Status'] || '').toUpperCase() === 'UNCERTAIN').length);
-
-    renderTable('extractPreview', output);
-    setStatus('extractStatus', 'Extraction completed. The cleaned CSV file is ready to download.', 'ok');
-  } catch(err){
-    console.error(err);
-    setStatus('extractStatus', err.message, 'bad');
-  }
-});
-
-function cleanCsvValue(v){
-  return String(v ?? '').replace(/\u00A0/g, ' ').trim();
-}
-function csvTextValueForExcel(v){
-  const s = cleanCsvValue(v);
-  return s ? `="${s.replace(/"/g, '""')}"` : '';
-}
-function isPlayerNumberColumn(key){
-  const k = String(key || '').trim().toLowerCase();
-  return /^player number\s+\d+$/.test(k);
-}
-
-document.getElementById('downloadExtractBtn').addEventListener('click', ()=>{
-  if (!extractedRows || !extractedRows.length) return;
-  const cleanedRows = extractedRows.map(row => {
-    const out = {};
-    Object.keys(row).forEach(key => {
-      const trimmedKey = String(key).trim();
-      if (HIDDEN_PREVIEW_COLUMNS.has(trimmedKey)) return;
-      out[trimmedKey] = isPlayerNumberColumn(trimmedKey)
-        ? csvTextValueForExcel(row[key])
-        : cleanCsvValue(row[key]);
+async function readCsvRows(file){
+  return new Promise((resolve, reject)=>{
+    Papa.parse(file, {
+      header:true,
+      skipEmptyLines:true,
+      complete:r=>resolve(r.data),
+      error:e=>reject(e)
     });
-    return out;
   });
-  const csv = Papa.unparse(cleanedRows, {
-    quotes: false,
-    skipEmptyLines: true
-  });
-  const blob = new Blob(["\ufeff" + csv], {type:'text/csv;charset=utf-8;'});
-  const base = (document.getElementById('rawOrdersFile').files[0]?.name || 'orders').replace(/\.[^.]+$/, '');
-  downloadBlob(blob, `${base}_extracted.csv`);
-});
-
-/* Step 2 */
-const SIZE_MAP = {
-  'AM':'M','AL':'L','AXL':'XL','A2XL':'2XL','A3XL':'3XL','A4XL':'4XL','AXS':'XS',
-  'WXS':'XS','WS':'S','WM':'M','WL':'L','WXL':'XL',
-  'YXS':'6-7','YS':'6-8','YM':'10-12','YL':'14-16','YXL':'18-20',
-  'O':'NOSZ','OS':'NOSZ','O/S':'NOSZ'
-};
-const COLOR_MAP = {
-  'RBLW':'ROYALBLUEWHITE',
-  'RDWHTRYLBL':'REDWHITEROYALBLUE',
-  'RYLBLWHTNVY':'ROYALBLUEWHITENAVY',
-  'DRKHTHGRYBLK':'DRKHTHRGYBK'
-};
-
-function stripTeamcodeSku(s){
-  const t = normText(s);
-  let parts = t.split('_');
-  if (parts.length >= 4 && /^[A-Z0-9]{5,}$/.test(parts[parts.length-1])) parts = parts.slice(0,-1);
-  return parts.join('_');
 }
-function materialSignaturePack(s){
-  const t = normText(s);
-  if (!t) return ['','',''];
-  const parts = t.split('_');
-  const code = parts[0] || '';
-  const size = (parts.length > 1 ? parts[parts.length-1] : '').replace(/[^A-Z0-9/+.-]/g,'');
-  let color = parts.length > 2 ? parts.slice(1,-1).join('') : '';
-  color = color.replace(/[^A-Z0-9]/g,'');
-  return [code, color, SIZE_MAP[size] || size];
+async function loadWorkbook(input){
+  const buf = input instanceof ArrayBuffer ? input : await input.arrayBuffer();
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buf);
+  return wb;
 }
-function materialSignatureOrder(s){
-  const t = stripTeamcodeSku(s);
-  if (!t) return ['','',''];
-  const parts = t.split('_');
-  const code = parts[0] || '';
-  const size = (parts.length > 1 ? parts[parts.length-1] : '').replace(/[^A-Z0-9/+.-]/g,'');
-  let color = parts.length > 2 ? parts.slice(1,-1).join('') : '';
-  color = color.replace(/[^A-Z0-9]/g,'');
-  color = COLOR_MAP[color] || color;
-  return [code, color, SIZE_MAP[size] || size];
+async function readOrderRows(file){
+  const name = String(file?.name || '').toLowerCase();
+  if (name.endsWith('.xlsx') || name.endsWith('.xlsm') || name.endsWith('.xltx') || name.endsWith('.xltm')){
+    const wb = await loadWorkbook(file);
+    const ws = wb.worksheets[0];
+    const headerRow = ws.getRow(1);
+    const headers = [];
+    headerRow.eachCell((cell, colNum)=>{ headers[colNum] = String(cell.value ?? '').trim(); });
+    const rows = [];
+    for (let r = 2; r <= ws.rowCount; r++){
+      const row = ws.getRow(r);
+      const obj = {};
+      let hasData = false;
+      headers.forEach((h, c)=>{
+        if (!h || !c) return;
+        const cell = row.getCell(c);
+        let val = cell.text ?? cell.value ?? '';
+        if (typeof val === 'object' && val && val.richText) val = val.richText.map(x=>x.text).join('');
+        val = String(val ?? '').trim();
+        if (val !== '') hasData = true;
+        obj[h] = val;
+      });
+      if (hasData) rows.push(obj);
+    }
+    return rows;
+  }
+  return await readCsvRows(file);
 }
-function similarity(a,b){
-  a = String(a||''); b = String(b||'');
-  if (!a && !b) return 1;
-  if (!a || !b) return 0;
-  let same = 0;
-  const len = Math.max(a.length, b.length);
-  const min = Math.min(a.length, b.length);
-  for(let i=0;i<min;i++) if (a[i] === b[i]) same++;
-  return same / len;
+function mapHeaders(ws){
+  const out = {};
+  ws.getRow(1).eachCell((cell, colNum)=>{ out[String(cell.value || '').trim()] = colNum; });
+  return out;
 }
+function getRowValue(row, idx){ return idx ? String(row.getCell(idx).value ?? '').trim() : ''; }
 function packingNameMatches(packValue, orderInitial, orderName){
   const pv = normText(packValue);
   if (['', 'X', 'XX'].includes(pv)) return !String(orderInitial||'').trim() && !String(orderName||'').trim();
@@ -1316,69 +1183,20 @@ function packingNameMatches(packValue, orderInitial, orderName){
   addCand(orderName);
 
   if (candidates.has(pv)) return true;
-
   for (const c of candidates){
     if (c && (c.includes(pv) || pv.includes(c))) return true;
   }
   return false;
 }
-async function readCsvRows(file){
-  return new Promise((resolve, reject)=>{
-    Papa.parse(file, {
-      header:true,
-      skipEmptyLines:true,
-      complete:r=>resolve(r.data),
-      error:e=>reject(e)
-    });
-  });
+function cleanCsvValue(v){ return String(v ?? '').replace(/\u00A0/g, ' ').trim(); }
+function csvTextValueForExcel(v){
+  const s = cleanCsvValue(v);
+  return s ? `="${s.replace(/"/g, '""')}"` : '';
 }
-async function readOrderRows(file){
-  const name = String(file?.name || '').toLowerCase();
-  if (name.endsWith('.xlsx') || name.endsWith('.xlsm') || name.endsWith('.xltx') || name.endsWith('.xltm')){
-    const wb = await loadWorkbook(file);
-    const ws = wb.worksheets[0];
-    const headerRow = ws.getRow(1);
-    const headers = [];
-    headerRow.eachCell((cell, colNum)=>{
-      headers[colNum] = String(cell.value ?? '').trim();
-    });
-    const rows = [];
-    for (let r = 2; r <= ws.rowCount; r++){
-      const row = ws.getRow(r);
-      const obj = {};
-      let hasData = false;
-      headers.forEach((h, c)=>{
-        if (!h || !c) return;
-        const cell = row.getCell(c);
-        let val = cell.text ?? cell.value ?? '';
-        if (typeof val === 'object' && val && val.richText) val = val.richText.map(x=>x.text).join('');
-        val = String(val ?? '').trim();
-        if (val !== '') hasData = true;
-        obj[h] = val;
-      });
-      if (hasData) rows.push(obj);
-    }
-    return rows;
-  }
-  return await readCsvRows(file);
+function isPlayerNumberColumn(key){
+  const k = String(key || '').trim().toLowerCase();
+  return /^player number\s+\d+$/.test(k);
 }
-async function loadWorkbook(input){
-  const buf = input instanceof ArrayBuffer ? input : await input.arrayBuffer();
-  const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(buf);
-  return wb;
-}
-function mapHeaders(ws){
-  const out = {};
-  ws.getRow(1).eachCell((cell, colNum)=>{
-    out[String(cell.value || '').trim()] = colNum;
-  });
-  return out;
-}
-function getRowValue(row, idx){
-  return idx ? String(row.getCell(idx).value ?? '').trim() : '';
-}
-
 
 function scoreStage2Candidate(cand, packPlayer, packName, packQty){
   let score = 100;
@@ -1415,7 +1233,7 @@ function scoreStage2Candidate(cand, packPlayer, packName, packQty){
   else score -= 8;
 
   const confidence = getCandidateConfidenceScore(cand);
-  score += Math.min(12, confidence * 4);
+  score += Math.min(12, confidence * 3);
 
   return {
     score,
@@ -1424,6 +1242,50 @@ function scoreStage2Candidate(cand, packPlayer, packName, packQty){
     ordNameList
   };
 }
+
+document.getElementById('extractBtn').addEventListener('click', async ()=>{
+  const rawFile = document.getElementById('rawOrdersFile').files[0];
+  if (!rawFile) { alert('Please choose the raw order CSV file first.'); return; }
+
+  try{
+    setStatus('extractStatus', 'Processing raw order CSV...', 'warn');
+    const rawRows = await readCsvRows(rawFile);
+    const {output, stats} = buildExtractorOutput(rawRows);
+    extractedRows = output;
+    document.getElementById('downloadExtractBtn').disabled = false;
+
+    setText('ex_input', stats.input_rows);
+    setText('ex_output', stats.output_rows);
+    setText('ex_match', stats.matched_rows);
+    setText('ex_max', stats.max_player_numbers);
+    setText('ex_uncertain', output.filter(r => String(r['Extraction Status'] || '').toUpperCase() === 'UNCERTAIN').length);
+
+    renderTable('extractPreview', output);
+    setStatus('extractStatus', 'Extraction completed. The cleaned CSV file is ready to download.', 'ok');
+  } catch(err){
+    console.error(err);
+    setStatus('extractStatus', err.message, 'bad');
+  }
+});
+
+document.getElementById('downloadExtractBtn').addEventListener('click', ()=>{
+  if (!extractedRows || !extractedRows.length) return;
+  const cleanedRows = extractedRows.map(row => {
+    const out = {};
+    Object.keys(row).forEach(key => {
+      const trimmedKey = String(key).trim();
+      if (HIDDEN_PREVIEW_COLUMNS.has(trimmedKey)) return;
+      out[trimmedKey] = isPlayerNumberColumn(trimmedKey)
+        ? csvTextValueForExcel(row[key])
+        : cleanCsvValue(row[key]);
+    });
+    return out;
+  });
+  const csv = Papa.unparse(cleanedRows, { quotes: false, skipEmptyLines: true });
+  const blob = new Blob(["\ufeff" + csv], {type:'text/csv;charset=utf-8;'});
+  const base = (document.getElementById('rawOrdersFile').files[0]?.name || 'orders').replace(/\.[^.]+$/, '');
+  downloadBlob(blob, `${base}_extracted.csv`);
+});
 
 document.getElementById('matchBtn').addEventListener('click', async ()=>{
   const orderFile = document.getElementById('cleanOrdersFile').files[0];
@@ -1452,14 +1314,11 @@ document.getElementById('matchBtn').addEventListener('click', async ()=>{
 
     const desiredCols = ['Player Number to check','Player Initial from Order','Player Name from Order','Match Score','Mismatch Status','Mismatch Notes'];
     let lastCol = ws.columnCount;
-
     for (const col of desiredCols){
       if (!hdr[col]){
         lastCol += 1;
         ws.getRow(1).getCell(lastCol).value = col;
         hdr[col] = lastCol;
-        const src = ws.getRow(1).getCell(lastCol - 1);
-        ws.getRow(1).getCell(lastCol).style = JSON.parse(JSON.stringify(src.style || {}));
       }
     }
 
@@ -1468,7 +1327,7 @@ document.getElementById('matchBtn').addEventListener('click', async ()=>{
     let totalOrderQty = 0;
     for (const r of orders){
       const oid = orderIdFromAny(rowValueByHeader(r, ['Order ID']));
-      const orderMaterial = rowValueByHeader(r, ['Material','Material ']);
+      const orderMaterial = rowValueByHeader(r, ['Material','Material ','Material Number','MaterialNumber']);
       const materialKey = normMaterialKey(orderMaterial || rowValueByHeader(r, ['Product SKU']) || '');
       if (!oid || !materialKey) continue;
       const comboKey = oid + '||' + materialKey;
@@ -1492,11 +1351,9 @@ document.getElementById('matchBtn').addEventListener('click', async ()=>{
 
     for (let rowNum = 2; rowNum <= ws.rowCount; rowNum++){
       const row = ws.getRow(rowNum);
-
       const bc = getRowValue(row, hdr['BC Order #']);
       const material = getRowValue(row, hdr['Material']);
       const oid = orderIdFromAny(bc);
-
       if (!oid || !material || normText(bc).includes('TOTAL')) continue;
 
       rowsProcessed += 1;
@@ -1511,6 +1368,10 @@ document.getElementById('matchBtn').addEventListener('click', async ()=>{
       const isDuplicateMaterialCombo = (orderPoolCounts[comboKey] || 0) >= 2;
       if (isDuplicateMaterialCombo) duplicateMaterialRows += 1;
       let status = 'Mismatch';
+      let bestScoreOut = '';
+      let bestNumList = [];
+      let bestInitList = [];
+      let bestNameList = [];
 
       if (!candidates.length){
         notes.push('Order ID + Material not found in cleaned order file');
@@ -1535,25 +1396,20 @@ document.getElementById('matchBtn').addEventListener('click', async ()=>{
           notes.push('Order ID + Material matched, but player line could not be resolved');
         } else {
           const chosen = candidates.splice(bestI, 1)[0];
+          bestScoreOut = bestScore;
 
-          const ordNumList = (bestMeta && bestMeta.ordPlayerList) ? bestMeta.ordPlayerList : getAllValuesByPrefixes(chosen, ['Player Number']);
-          const ordInitList = (bestMeta && bestMeta.ordInitList) ? bestMeta.ordInitList : getAllValuesByPrefixes(chosen, ['Player Initial']);
-          const ordNameList = (bestMeta && bestMeta.ordNameList) ? bestMeta.ordNameList : getAllValuesByPrefixes(chosen, ['Player Name', 'Player Name Raw', 'Player Last Name', 'Last Name']);
+          const ordNumList = bestMeta?.ordPlayerList || getAllValuesByPrefixes(chosen, ['Player Number']);
+          const ordInitList = bestMeta?.ordInitList || getAllValuesByPrefixes(chosen, ['Player Initial']);
+          const ordNameList = bestMeta?.ordNameList || getAllValuesByPrefixes(chosen, ['Player Name', 'Player Name Raw', 'Player Last Name', 'Last Name']);
+          bestNumList = ordNumList;
+          bestInitList = ordInitList;
+          bestNameList = ordNameList;
+
           const ordNum = firstUsefulValue(ordNumList);
-          const ordInit = firstUsefulValue(ordInitList);
-          const ordName = firstUsefulValue(ordNameList);
-
-          row.getCell(hdr['Player Number to check']).value = ordNumList.join(' | ');
-          row.getCell(hdr['Player Initial from Order']).value = ordInitList.join(' | ');
-          row.getCell(hdr['Player Name from Order']).value = ordNameList.join(' | ');
-          row.getCell(hdr['Match Score']).value = bestScore;
+          const ordQty = qtyNumber(chosen.__qty);
 
           if (ordNum) playerPulled++;
-
-          const ordQty = qtyNumber(chosen.__qty);
-          if (packQty !== ordQty){
-            notes.push('Quantity mismatch');
-          }
+          if (packQty !== ordQty) notes.push('Quantity mismatch');
 
           if (ordNum){
             const numberMatched = ordNumList.some(v => samePlayerNumber(packPlayer, v));
@@ -1592,21 +1448,18 @@ document.getElementById('matchBtn').addEventListener('click', async ()=>{
         }
       }
 
+      row.getCell(hdr['Player Number to check']).value = bestNumList.join(' | ');
+      row.getCell(hdr['Player Initial from Order']).value = bestInitList.join(' | ');
+      row.getCell(hdr['Player Name from Order']).value = bestNameList.join(' | ');
+      row.getCell(hdr['Match Score']).value = bestScoreOut;
       row.getCell(hdr['Mismatch Status']).value = status;
       const allNotes = notes.concat(reviewNotes);
       row.getCell(hdr['Mismatch Notes']).value = allNotes.join('; ');
 
-      const styleSrc = row.getCell(Math.max(1, hdr['Player Number to check'] - 1)).style || {};
-      desiredCols.forEach(col=>{
-        row.getCell(hdr[col]).style = JSON.parse(JSON.stringify(styleSrc));
-      });
-
       if (status === 'Mismatch'){
         const redFill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFFEE2E2'}};
         const darkRedFont = {color:{argb:'FF991B1B'}, bold:true};
-        desiredCols.forEach(col=>{
-          row.getCell(hdr[col]).fill = redFill;
-        });
+        desiredCols.forEach(col=>{ row.getCell(hdr[col]).fill = redFill; });
         row.getCell(hdr['Mismatch Status']).font = darkRedFont;
         mismatch += 1;
       } else {
@@ -1619,10 +1472,10 @@ document.getElementById('matchBtn').addEventListener('click', async ()=>{
         'Packing Qty': packQty,
         'Last Name / Initials': getRowValue(row, hdr['Last Name / Initials']),
         'Player #': getRowValue(row, hdr['Player #']),
-        'Player Number to check': getRowValue(row, hdr['Player Number to check']),
-        'Player Initial from Order': getRowValue(row, hdr['Player Initial from Order']),
-        'Player Name from Order': getRowValue(row, hdr['Player Name from Order']),
-        'Match Score': getRowValue(row, hdr['Match Score']),
+        'Player Number to check': bestNumList.join(' | '),
+        'Player Initial from Order': bestInitList.join(' | '),
+        'Player Name from Order': bestNameList.join(' | '),
+        'Match Score': bestScoreOut,
         'Mismatch Status': status,
         'Mismatch Notes': allNotes.join('; ')
       });
